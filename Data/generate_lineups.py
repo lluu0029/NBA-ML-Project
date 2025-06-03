@@ -4,6 +4,11 @@ def generate_lineups(season: str):
     df_players = pd.read_csv(f'saved_data\{season}_player_data.csv')
     df_teams = pd.read_csv(f'saved_data\{season}_team_data.csv') 
 
+    lineups_exist = {'STARTING_PLAYER_IDs', 'STARTING_PLAYER_NAMEs', 'STARTING_POSITIONs'}
+    if lineups_exist.issubset(df_teams.columns):
+        print('Lineups already exist')
+        return
+
     # Filter out start_positions = nan  
     df_lineups = df_players[~df_players['START_POSITION'].isna()] 
 
@@ -23,6 +28,7 @@ def generate_lineups(season: str):
 
     # Update df_teams csv
     df_teams.to_csv(f'saved_data\\{season}_team_data.csv', index=False)
+    print('Lineups created')
 
 if __name__ == "__main__":
-    generate_lineups('2023-24')
+    generate_lineups('2024-25')
