@@ -10,10 +10,12 @@ def generate_lineups(season: str):
     # Group by 'GAME_ID' and 'TEAM_ID', create list for PLAYER_IDs and PLAYER_NAMEs
     df_lineups = df_lineups.groupby(['GAME_ID', 'TEAM_ID']).agg({
         'PLAYER_ID': list,
-        'PLAYER_NAME': list
+        'PLAYER_NAME': list,
+        'START_POSITION': list
     }).rename(columns={
         'PLAYER_ID': 'STARTING_PLAYER_IDs',
-        'PLAYER_NAME': 'STARTING_PLAYER_NAMEs'
+        'PLAYER_NAME': 'STARTING_PLAYER_NAMEs',
+        'START_POSITION' : 'STARTING_POSITIONs'
     }).reset_index()
 
     # Add STARTING_PLAYER_IDs and STARTING_PLAYER_NAMEs columns to df_teams
@@ -21,7 +23,6 @@ def generate_lineups(season: str):
 
     # Update df_teams csv
     df_teams.to_csv(f'saved_data\\{season}_team_data.csv', index=False)
-    
 
 if __name__ == "__main__":
     generate_lineups('2023-24')
