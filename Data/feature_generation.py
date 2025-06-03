@@ -3,8 +3,8 @@ import pandas as pd
 
 
 def generate_dataset(player_id, team_id, season):
-    df_players = pd.read_csv(fr'C:\Users\Lachlan\Documents\GitHub\NBA-ML-Project\saved_data\{season}_player_data.csv')
-    df_teams = pd.read_csv(fr'C:\Users\Lachlan\Documents\GitHub\NBA-ML-Project\saved_data\{season}_team_data.csv')
+    df_players = pd.read_csv(f'saved_data\{season}_player_data.csv')
+    df_teams = pd.read_csv(f'saved_data\{season}_team_data.csv')
 
     df_players = df_players.drop_duplicates()
     df_teams = df_teams.drop_duplicates()

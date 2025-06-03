@@ -9,7 +9,7 @@ import math
 name = 'Nikola Jokic'
 season = '2023-24'
 
-df_player = pd.read_csv(rf'C:\Users\Lachlan\Documents\GitHub\NBA-ML-Project\datasets\{name}_{season}.csv')
+df_player = pd.read_csv(f'datasets\{name}_{season}.csv')
 # print(df_player.columns.to_list())
 
 # Train

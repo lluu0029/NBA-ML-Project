@@ -55,7 +55,7 @@ def generate_save_data(season):
     try:
         while game_ids:
             game_id = game_ids.pop(0)
-            with open(f"game_ids_{season}.json", "w") as f:
+            with open(os.path.join('game_ids', f"game_ids_{season}.json"), "w") as f:
                 json.dump(game_ids, f)
 
             start_time = time.time()
@@ -81,9 +81,11 @@ def generate_save_data(season):
             player_traditional = boxscore_traditional.get_data_frames()[0]
             team_traditional = boxscore_traditional.get_data_frames()[1]
 
+            # Avoid repeated columns
             new_player_cols = [col for col in player_traditional.columns if col not in player_data.columns]
             new_team_cols = [col for col in team_traditional.columns if col not in team_data.columns]
 
+            # Add new columns
             for col in new_player_cols:
                 player_data[col] = player_traditional[col]
 
