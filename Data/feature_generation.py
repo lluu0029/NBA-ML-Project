@@ -140,5 +140,5 @@ if __name__ == "__main__":
     season = '2023-24'
 
     df_player = generate_dataset(player_id, team_id, season)
-    df_player.to_csv(rf'C:\Users\Lachlan\Documents\GitHub\NBA-ML-Project\datasets\{name}_{season}.csv', index=False)
+    df_player.to_csv(f'datasets\{name}_{season}.csv', index=False)
 
