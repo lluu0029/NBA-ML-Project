@@ -133,42 +133,9 @@ def generate_dataset(player_id: int, df_players, df_teams):
     # # Creating label 'NEXT_GAME_PTS
     # df_player['NEXT_GAME_PTS'] = df_player.groupby('PLAYER_ID')['PTS'].shift(-1)
 
-    # Creating label for the next game's pts/min
-    df_players['NEXT_GAME_PTS_PER_MIN'] = (df_players.groupby('PLAYER_ID')['PTS_PER_MIN'].shift(-1))
-
-    # Days since last game
-    df_players['LAST_GAME_DAYS'] = df_players.groupby('PLAYER_ID')['game_date'].diff().dt.days
-    # Days until next game
-    df_players['DAYS_UNTIL_NEXT_GAME'] = df_players.groupby('PLAYER_ID')['LAST_GAME_DAYS'].shift(-1)
-
-    # Shift is_home to create feature for whether next game is home
-    df_players['NEXT_GAME_IS_HOME'] = df_players.groupby('PLAYER_ID')['is_home'].shift(-1)
-
+    # DF for chosen player and their team
     df_player = df_players[df_players.PLAYER_ID == player_id].copy()
     df_team = df_teams[df_teams.TEAM_ID == team_id].copy()
-
-    # Drop rows with NaN value
-    df_player = df_player.dropna(subset=['NEXT_GAME_PTS_PER_MIN', 'LAST_GAME_DAYS'])
-
-    stat_cols = ['MIN', 'E_OFF_RATING', 'OFF_RATING', 'E_DEF_RATING', 'DEF_RATING',
-       'E_NET_RATING', 'NET_RATING', 'AST_PCT', 'AST_TOV', 'AST_RATIO',
-       'OREB_PCT', 'DREB_PCT', 'REB_PCT', 'TM_TOV_PCT', 'EFG_PCT', 'TS_PCT',
-       'USG_PCT', 'E_USG_PCT', 'E_PACE', 'PACE', 'PACE_PER40', 'POSS', 'PIE',
-       'is_home', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
-       'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TO', 'PF',
-       'PTS', 'PLUS_MINUS', 'DAYS_UNTIL_NEXT_GAME', 'PTS_PER_MIN']
-
-    # Add seasonal avg stats
-    df_player = add_seasonal_avgs(df_player, stat_cols)
-
-    # DF for 5 game rolling avg
-    five_game_rolling_avg = create_rolling_avg(df_player, stat_cols, 5)
-    # DF for 3 game rolling avg
-    # three_game_rolling_avg = create_rolling_avg(df_player, stat_cols, 3)
-
-    # Merge rolling avgs with df_player
-    df_player = five_game_rolling_avg.merge(df_player, on='GAME_ID', how='left')
-    # df_player = df_player.merge(three_game_rolling_avg, on='GAME_ID', how='left')
 
     # Merge with df_team to include player team starting lineup
     df_player = df_player.merge(
@@ -186,9 +153,8 @@ def generate_dataset(player_id: int, df_players, df_teams):
         'STARTING_PLAYER_NAMEs': 'OPP_PLAYER_NAMEs'
     })
 
-    # Merge statistics with df_player
+    # Merge opponent statistics with df_player
     df_player = df_player.merge(df_opponents, on='GAME_ID', how='left')
-
     # Filter out own team labelled as opponents 
     df_player = df_player[df_player['TEAM_ID'] != df_player['OPP_TEAM_ID']].reset_index(drop=True)
 
@@ -197,12 +163,44 @@ def generate_dataset(player_id: int, df_players, df_teams):
     # Calculate avg pts/min with opponent lineup
     df_player['AVG_PTS_PER_MIN_AGAINST_OPP'] = df_player.apply(lambda row: calc_avg_pts_per_min_opponents(row, df_players), axis=1)
 
+
+    stat_cols = ['MIN', 'E_OFF_RATING', 'OFF_RATING', 'E_DEF_RATING', 'DEF_RATING',
+       'E_NET_RATING', 'NET_RATING', 'AST_PCT', 'AST_TOV', 'AST_RATIO',
+       'OREB_PCT', 'DREB_PCT', 'REB_PCT', 'TM_TOV_PCT', 'EFG_PCT', 'TS_PCT',
+       'USG_PCT', 'E_USG_PCT', 'E_PACE', 'PACE', 'PACE_PER40', 'POSS', 'PIE',
+       'is_home', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
+       'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TO', 'PF',
+       'PTS', 'PLUS_MINUS', 'PTS_PER_MIN']
+
+    # Add seasonal avg stats
+    df_player = add_seasonal_avgs(df_player, stat_cols)
+
+    # DF for 5 game rolling avg
+    five_game_rolling_avg = create_rolling_avg(df_player, stat_cols, 5)
+    # DF for 3 game rolling avg
+    # three_game_rolling_avg = create_rolling_avg(df_player, stat_cols, 3)
+
+    # Merge rolling avgs with df_player
+    df_player = five_game_rolling_avg.merge(df_player, on='GAME_ID', how='left')
+    # df_player = df_player.merge(three_game_rolling_avg, on='GAME_ID', how='left')
+
     # Shift avg pts/min for team and opponent lineup to create the avg pts/min for then next game.
     df_player['NEXT_AVG_PTS_PER_MIN_WITH_TEAM'] = df_player.groupby('PLAYER_ID')['AVG_PTS_PER_MIN_WITH_TEAM'].shift(-1)
     df_player['NEXT_AVG_PTS_PER_MIN_AGAINST_OPP'] = df_player.groupby('PLAYER_ID')['AVG_PTS_PER_MIN_AGAINST_OPP'].shift(-1)
 
     # Filter out 'AVG_PTS_PER_MIN_AGAINST_OPP' values which are nan
     df_player = df_player[df_player['NEXT_AVG_PTS_PER_MIN_AGAINST_OPP'].notna()]
+
+    # Creating label for the next game's pts/min
+    df_player['NEXT_GAME_PTS_PER_MIN'] = (df_player.groupby('PLAYER_ID')['PTS_PER_MIN'].shift(-1))
+    # Days since last game
+    df_player['LAST_GAME_DAYS'] = df_player.groupby('PLAYER_ID')['game_date'].diff().dt.days
+    # Days until next game
+    df_player['DAYS_UNTIL_NEXT_GAME'] = df_player.groupby('PLAYER_ID')['LAST_GAME_DAYS'].shift(-1)
+    # Shift is_home to create feature for whether next game is home
+    df_player['NEXT_GAME_IS_HOME'] = df_player.groupby('PLAYER_ID')['is_home'].shift(-1)
+
+    df_player = df_player[df_player['NEXT_GAME_PTS_PER_MIN'].notna()]
 
     # Drop irrelevant columns
     drop_player_cols = [
@@ -235,4 +233,4 @@ if __name__ == "__main__":
 
     df_player.to_csv(f'datasets\{name}.csv', index=False)
 
-    # print(df_player[['NEXT_GAME_PTS_PER_MIN', 'PTS_PER_MIN', 'NEXT_AVG_PTS_PER_MIN_WITH_TEAM', 'NEXT_AVG_PTS_PER_MIN_AGAINST_OPP']].tail(10))
+    print(df_player[['NEXT_GAME_PTS_PER_MIN', 'PTS_PER_MIN', 'NEXT_AVG_PTS_PER_MIN_WITH_TEAM', 'NEXT_AVG_PTS_PER_MIN_AGAINST_OPP']].tail(10))
