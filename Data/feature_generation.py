@@ -28,29 +28,13 @@ def calc_avg_pts_per_min_teammates(row, df_players: pd.DataFrame):
             ]
 
             if len(played_together_games) > 0:
-                # Convert MIN to float
-                played_together_games['MIN'] = played_together_games['MIN'].apply(lambda x: round(float(x.split(':')[0]) + float(x.split(':')[1]) / 60, 1))
-                # Order by game date, earliest to latest.
-                played_together_games['game_date'] = pd.to_datetime(played_together_games['game_date'])
-                played_together_games = played_together_games.sort_values(by='game_date')
-                # Create feature pts/min
-                played_together_games['PTS_PER_MIN'] = played_together_games['PTS'] / played_together_games['MIN']
-                # Cap values for pts/min outliers, with min=0.4 and max=1.1
-                played_together_games['PTS_PER_MIN'] = played_together_games['PTS_PER_MIN'].clip(lower=0.3)
-                played_together_games['PTS_PER_MIN'] = played_together_games['PTS_PER_MIN'].clip(upper=1.3)
-
                 # Filter rows to only those prior to the game_date
                 played_together_games = played_together_games[played_together_games['game_date'] < game_date]
 
                 # Calculate mean PTS_PER_MIN, add to list
                 pts_per_min_avgs.append(played_together_games['PTS_PER_MIN'].mean())
                 games_played_together.append(len(played_together_games))
-                # print(played_together_games['PTS_PER_MIN'].to_list())
-    
-    # for i in range(len(pts_per_min_avgs)):
-    #     print(f'pts_per_min_avg: {pts_per_min_avgs[i]}, games_played_together: {games_played_together[i]}')
-    
-    # Return avg pts/min across their starting lineup
+
     return sum(pts_per_min_avgs) / len(pts_per_min_avgs)
 
 
@@ -81,32 +65,15 @@ def calc_avg_pts_per_min_opponents(row, df_players: pd.DataFrame):
             ]
 
             if len(played_together_games) > 0:
-                # Convert MIN to float
-                played_together_games['MIN'] = played_together_games['MIN'].apply(lambda x: round(float(x.split(':')[0]) + float(x.split(':')[1]) / 60, 1))
-                # Order by game date, earliest to latest.
-                played_together_games['game_date'] = pd.to_datetime(played_together_games['game_date'])
-                played_together_games = played_together_games.sort_values(by='game_date')
-                # Create feature pts/min
-                played_together_games['PTS_PER_MIN'] = played_together_games['PTS'] / played_together_games['MIN']
-                # Cap values for pts/min outliers, with min=0.4 and max=1.1
-                played_together_games['PTS_PER_MIN'] = played_together_games['PTS_PER_MIN'].clip(lower=0.3)
-                played_together_games['PTS_PER_MIN'] = played_together_games['PTS_PER_MIN'].clip(upper=1.3)
-
                 # Filter rows to only those prior to the game_date
                 played_together_games = played_together_games[played_together_games['game_date'] < game_date]
 
                 # Calculate mean PTS_PER_MIN, add to list
                 pts_per_min_avgs.append(played_together_games['PTS_PER_MIN'].mean())
                 games_played_together.append(len(played_together_games))
-                # print(played_together_games['PTS_PER_MIN'].to_list())
-    
-    # for i in range(len(pts_per_min_avgs)):
-    #     print(f'pts_per_min_avg: {pts_per_min_avgs[i]}, games_played_together: {games_played_together[i]}')
     
     # Remove nan values if they exist
     pts_per_min_avgs = [x for x in pts_per_min_avgs if pd.notna(x)]
-
-    # print(pts_per_min_avgs, sum(pts_per_min_avgs) / len(pts_per_min_avgs))
 
     # Data on 3 players required for it to be added
     if len(pts_per_min_avgs) >= 3:
@@ -142,47 +109,46 @@ def create_rolling_avg(df, stat_cols: list, number_games: int):
     return df_rolling_avg
 
 
-# def generate_dataset(player_id: int, team_id: int, season: str):
 def generate_dataset(player_id: int, df_players, df_teams):
     df_players = df_players.drop_duplicates()
     df_teams = df_teams.drop_duplicates()
 
-    df_player = df_players[df_players.PLAYER_ID == player_id].copy()
-    df_team = df_teams[df_teams.TEAM_ID == team_id].copy()
+    # Filter out games where players had no minutes
+    df_players = df_players[df_players['MIN'].notna()]
 
     # Convert MIN to float
-    df_player['MIN'] = df_player['MIN'].apply(lambda x: round(float(x.split(':')[0]) + float(x.split(':')[1]) / 60, 1))
+    df_players['MIN'] = df_players['MIN'].apply(lambda x: round(float(x.split(':')[0]) + float(x.split(':')[1]) / 60, 1))
 
     # Order by game date, earliest to latest.
-    df_player['game_date'] = pd.to_datetime(df_player['game_date'])
-    df_player = df_player.sort_values(by='game_date')
+    df_players['game_date'] = pd.to_datetime(df_players['game_date'])
+    df_players = df_players.sort_values(by='game_date')
 
     # Create feature pts/min
-    df_player['PTS_PER_MIN'] = df_player['PTS'] / df_player['MIN']
+    df_players['PTS_PER_MIN'] = df_players['PTS'] / df_players['MIN']
 
-    # Cap values for pts/min outliers, with min=0.4 and max=1.1
-    df_player['PTS_PER_MIN'] = df_player['PTS_PER_MIN'].clip(lower=0.3)
-    df_player['PTS_PER_MIN'] = df_player['PTS_PER_MIN'].clip(upper=1.3)
+    # Cap values for pts/min outliers, with min=0.3 and max=1.3
+    df_players['PTS_PER_MIN'] = df_players['PTS_PER_MIN'].clip(lower=0.3)
+    df_players['PTS_PER_MIN'] = df_players['PTS_PER_MIN'].clip(upper=1.3)
 
     # # Creating label 'NEXT_GAME_PTS
     # df_player['NEXT_GAME_PTS'] = df_player.groupby('PLAYER_ID')['PTS'].shift(-1)
+
     # Creating label for the next game's pts/min
-    df_player['NEXT_GAME_PTS_PER_MIN'] = (df_player.groupby('PLAYER_ID')['PTS_PER_MIN'].shift(-1))
+    df_players['NEXT_GAME_PTS_PER_MIN'] = (df_players.groupby('PLAYER_ID')['PTS_PER_MIN'].shift(-1))
 
     # Days since last game
-    df_player['LAST_GAME_DAYS'] = df_player.groupby('PLAYER_ID')['game_date'].diff().dt.days
+    df_players['LAST_GAME_DAYS'] = df_players.groupby('PLAYER_ID')['game_date'].diff().dt.days
     # Days until next game
-    df_player['DAYS_UNTIL_NEXT_GAME'] = df_player.groupby('PLAYER_ID')['LAST_GAME_DAYS'].shift(-1)
-
+    df_players['DAYS_UNTIL_NEXT_GAME'] = df_players.groupby('PLAYER_ID')['LAST_GAME_DAYS'].shift(-1)
 
     # Shift is_home to create feature for whether next game is home
-    df_player['NEXT_GAME_IS_HOME'] = df_player.groupby('PLAYER_ID')['is_home'].shift(-1)
+    df_players['NEXT_GAME_IS_HOME'] = df_players.groupby('PLAYER_ID')['is_home'].shift(-1)
 
+    df_player = df_players[df_players.PLAYER_ID == player_id].copy()
+    df_team = df_teams[df_teams.TEAM_ID == team_id].copy()
 
-    # Drop rows with NAN value
-    # df_player = df_player.dropna(subset=['NEXT_GAME_PTS', 'LAST_GAME_DAYS'])
+    # Drop rows with NaN value
     df_player = df_player.dropna(subset=['NEXT_GAME_PTS_PER_MIN', 'LAST_GAME_DAYS'])
-
 
     stat_cols = ['MIN', 'E_OFF_RATING', 'OFF_RATING', 'E_DEF_RATING', 'DEF_RATING',
        'E_NET_RATING', 'NET_RATING', 'AST_PCT', 'AST_TOV', 'AST_RATIO',
@@ -249,7 +215,6 @@ def generate_dataset(player_id: int, df_players, df_teams):
     return df_player
 
 
-
 if __name__ == "__main__":
     # Sample data
     name = 'Nikola Jokic'
@@ -268,6 +233,6 @@ if __name__ == "__main__":
 
     df_player = generate_dataset(player_id, df_players, df_teams)
 
-    # df_player.to_csv(f'datasets\{name}.csv', index=False)
+    df_player.to_csv(f'datasets\{name}.csv', index=False)
 
-    print(df_player[['NEXT_GAME_PTS_PER_MIN', 'PTS_PER_MIN', 'NEXT_AVG_PTS_PER_MIN_WITH_TEAM', 'NEXT_AVG_PTS_PER_MIN_AGAINST_OPP']].tail(10))
+    # print(df_player[['NEXT_GAME_PTS_PER_MIN', 'PTS_PER_MIN', 'NEXT_AVG_PTS_PER_MIN_WITH_TEAM', 'NEXT_AVG_PTS_PER_MIN_AGAINST_OPP']].tail(10))
